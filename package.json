@@ -8,7 +8,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "node index.js",       // 🔁 burası değişti
+    "dev": "nodemon index.js"       // sadece local geliştirme için
   },
   "keywords": [],
   "author": "",
