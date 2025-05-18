@@ -16,10 +16,10 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'http://konyaereglisatis.com',
-  // sadece senin frontend izinli
+  origin: ['http://localhost:5173', 'http://konyaereglisatis.com','https://konyaereglisatis.com'],
   credentials: true
 }));
+
 app.use(bodyParser.json({ limit: '30mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
