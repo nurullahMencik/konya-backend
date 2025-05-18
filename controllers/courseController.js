@@ -12,43 +12,46 @@ const createCourse = async (req, res) => {
   try {
     const { title, description, category, user, price } = req.body;
 
-    if (!user) {
-      return res.status(400).json({ message: 'Kullanıcı bilgisi eksik!' });
-    }
-
+    if (!user) return res.status(400).json({ message: 'Kullanıcı bilgisi eksik!' });
     const foundUser = await User.findOne({ username: user });
+    if (!foundUser) return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
 
-    if (!foundUser) {
-      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
-    }
+    const file = req.files?.file?.[0];
+    const image = req.files?.image?.[0];
 
-    const file = req.files?.file;
-    const image = req.files?.image;
+    if (!file || !image) return res.status(400).json({ message: 'Dosya ve fotoğraf yüklenmeli' });
 
-    if (!file || !image) {
-      return res.status(400).json({ message: 'Dosya ve fotoğraf yüklenmeli' });
-    }
-
-    const fileUrl = `/uploads/${file[0].filename}`;
-    const imageUrl = `/uploads/${image[0].filename}`;
+    // Cloudinary'e yükleme
+    const uploadedVideo = await cloudinary.uploader.upload(file.path, {
+      resource_type: "video",
+      folder: "courses/videos"
+    });
+    const uploadedImage = await cloudinary.uploader.upload(image.path, {
+      folder: "courses/images"
+    });
 
     const newCourse = new Course({
       title,
       price,
       description,
       category,
-      user: foundUser.username, // kullanıcı adı olarak kaydediyoruz
-      fileUrl,
-      imageUrl,
+      user: foundUser.username,
+      fileUrl: uploadedVideo.secure_url,
+      imageUrl: uploadedImage.secure_url,
     });
 
     await newCourse.save();
 
-    // Kullanıcının oluşturduğu kurslar listesine ekle
+    // Kullanıcıya kursu bağla
     foundUser.createdCourses.push(newCourse._id);
     await foundUser.save();
 
+    // Geçici dosyaları sil
+    fs.unlinkSync(file.path);
+    fs.unlinkSync(image.path);
+
     res.status(201).json({ message: 'Kurs başarıyla oluşturuldu', course: newCourse });
+
   } catch (error) {
     console.error('Kurs oluşturulurken hata:', error);
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
