@@ -1,0 +1,21 @@
+const express = require("express");
+const router = express.Router();
+const authController = require("../controllers/authController");
+const verifyToken = require("../middleware/verifyToken");
+
+// Kullanıcı kayıt ve giriş işlemleri
+router.post('/register', authController.register);
+router.post('/login', authController.login);
+
+// Kullanıcıya ait kursları getirme (satın alınan ve oluşturulan)
+router.get('/my-courses', verifyToken, authController.getMyCourses);
+router.get('/created-courses', verifyToken, authController.getCreatedCourses);
+
+// Kurs güncelleme, silme ve detay getirme (yetkilendirme ile)
+router.delete('/courses/:id', verifyToken, authController.deleteCourse);
+router.put('/courses/:id', verifyToken, authController.updateCourse);
+router.get('/courses/:id', verifyToken, authController.getCourseById);
+
+
+
+module.exports = router;
