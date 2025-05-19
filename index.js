@@ -10,6 +10,7 @@ const authRouter = require("./routes/authRoute.js");
 const courseRouter = require("./routes/courseRoute.js");
 const purchaseRoutes = require("./routes/purchaseRoutes.js");
 const profileRoutes = require('./routes/profileRoute.js');
+const simpleAiRoutes = require('./routes/simpleAi');
 dotenv.config();
 
 const app = express();
@@ -28,6 +29,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/courses", courseRouter);
 app.use("/api/purchase", purchaseRoutes);
 app.use("/api/profile",profileRoutes)
+app.use('/api', simpleAiRoutes);
 // Start server
 const PORT = process.env.PORT || 5000;
 databaseConnect();
