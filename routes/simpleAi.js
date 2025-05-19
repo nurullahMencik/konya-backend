@@ -19,41 +19,60 @@ router.get('/simple-ai/:username', async (req, res) => {
       categoryCounts[course.category] = (categoryCounts[course.category] || 0) + 1;
     });
 
-    // Kullanıcının en çok aldığı kategorileri bul (en az 1 kurs almış olmalı)
+    // Kategorileri frekanslarına göre sırala (en çok alınan önce)
     const sortedCategories = Object.entries(categoryCounts)
       .sort((a, b) => b[1] - a[1])
       .map(item => item[0]);
 
-    // Eğer kullanıcının kursu yoksa rastgele kategorilerden öner
-    if (sortedCategories.length === 0) {
-      const randomRecommendations = await Course.aggregate([
-        { $sample: { size: 3 } }
-      ]);
-      return res.json(randomRecommendations);
-    }
-
     // Kullanıcının sahip olduğu kursların _id'leri
     const ownedCourseIds = user.myCourses.map(c => c._id);
 
-    // Öneriler: Kullanıcının en çok aldığı kategorilerden ve sahip olmadığı kurslar
-    const recommendations = await Course.find({
-      category: { $in: sortedCategories },
-      _id: { $nin: ownedCourseIds }
-    })
-    .sort({ createdAt: -1 }) // Yeni eklenen kurslar önce gelsin
-    .limit(3);
+    // Önerileri toplayacağımız dizi
+    let recommendations = [];
 
-    // Eğer öneri yoksa, aynı kategorilerden farklı kurslar öner
-    if (recommendations.length === 0) {
-      const fallbackRecommendations = await Course.find({
-        category: { $in: sortedCategories },
+    // 1. Öncelikle en çok alınan kategoriden tüm kursları öner (sahip olmadıkları)
+    for (const category of sortedCategories) {
+      const categoryCourses = await Course.find({
+        category,
         _id: { $nin: ownedCourseIds }
-      })
-      .limit(3);
-      return res.json(fallbackRecommendations);
+      }).sort({ createdAt: -1 });
+
+      recommendations.push(...categoryCourses);
     }
 
-    res.json(recommendations);
+    // 2. Eğer hala yeterli öneri yoksa, diğer kategorilerden rastgele kurslar ekle
+    if (recommendations.length < 10) {
+      const remainingCategories = ALL_CATEGORIES.filter(cat => !sortedCategories.includes(cat));
+      const randomCourses = await Course.aggregate([
+        { 
+          $match: { 
+            category: { $in: remainingCategories },
+            _id: { $nin: ownedCourseIds }
+          } 
+        },
+        { $sample: { size: 10 - recommendations.length } }
+      ]);
+      recommendations.push(...randomCourses);
+    }
+
+    // 3. Eğer hala yeterli öneri yoksa, tüm kategorilerden rastgele kurslar ekle
+    if (recommendations.length < 10) {
+      const allCourses = await Course.aggregate([
+        { $match: { _id: { $nin: ownedCourseIds } } },
+        { $sample: { size: 10 - recommendations.length } }
+      ]);
+      recommendations.push(...allCourses);
+    }
+
+    // 4. Son olarak, benzersiz kurslar sağla ve limit uygula
+    const uniqueRecommendations = recommendations.reduce((acc, current) => {
+      if (!acc.some(item => item._id.equals(current._id))) {
+        acc.push(current);
+      }
+      return acc;
+    }, []).slice(0, 10); // En fazla 10 öneri
+
+    res.json(uniqueRecommendations);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Sunucu hatası' });
