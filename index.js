@@ -16,30 +16,58 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+// === GÜVENİLİR PROXY (Render için şart) ===
+app.set('trust proxy', 1);
+
+// === CORS Ayarı (Tüm HTTP istekleri için geçerli) ===
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://konyaereglisatis.com",
+  "https://konyaereglisatis.com"
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Tarayıcı CORS preflight isteğinde origin boş olabilir
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("CORS policy hatası: Erişim engellendi"), false);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+}));
+
+// === Middleware ===
+app.use(bodyParser.json({ limit: '30mb', extended: true }));
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
+// === Routes ===
+app.use("/api/auth", authRouter);
+app.use("/api/courses", courseRouter);
+app.use("/api/purchase", purchaseRoutes);
+app.use("/api/profile", profileRoutes);
+
 // === Socket.IO Ayarı ===
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://konyaereglisatis.com", "https://konyaereglisatis.com"],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true,
   }
 });
 
-// === Kullanıcı adı - socketId eşleştirmesi için map ===
 const users = {}; // { username: socketId }
 
-// === Socket bağlantı işlemleri ===
 io.on("connection", (socket) => {
   console.log("Yeni kullanıcı bağlandı:", socket.id);
 
-  // Kullanıcı kendini tanıtırken (join olurken)
   socket.on("join", (username) => {
     users[username] = socket.id;
     console.log(`Kullanıcı ${username} socketId: ${socket.id}`);
-    io.emit("user-list", users); // İsteğe bağlı: tüm client’lara online listesi
+    io.emit("user-list", users);
   });
 
-  // Kullanıcı ayrıldığında
   socket.on("disconnect", () => {
     for (const [username, id] of Object.entries(users)) {
       if (id === socket.id) {
@@ -49,10 +77,9 @@ io.on("connection", (socket) => {
       }
     }
     socket.broadcast.emit("call-ended");
-    io.emit("user-list", users); // Listeyi güncelle
+    io.emit("user-list", users);
   });
 
-  // Çağrı başlat
   socket.on("call-user", ({ userToCallUsername, signalData, from, name }) => {
     const toSocketId = users[userToCallUsername];
     if (toSocketId) {
@@ -64,33 +91,14 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Çağrıya cevap ver
   socket.on("answer-call", ({ signal, to }) => {
     io.to(to).emit("call-accepted", signal);
   });
 
-  // Socket ID’sini gönder
   socket.emit("me", socket.id);
 });
 
-
-// === Middleware ===
-app.use(cors({
-  origin: ['http://localhost:5173', 'https://konyaereglisatis.com'],
-  credentials: true
-}));
-app.use(bodyParser.json({ limit: '30mb', extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
-
-
-// === Routes ===
-app.use("/api/auth", authRouter);
-app.use("/api/courses", courseRouter);
-app.use("/api/purchase", purchaseRoutes);
-app.use("/api/profile", profileRoutes);
-
-
-// === Veritabanı + Sunucu başlat ===
+// === Veritabanı ve sunucu başlat ===
 const PORT = process.env.PORT || 5000;
 databaseConnect();
 
