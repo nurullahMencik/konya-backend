@@ -13,23 +13,45 @@ router.get('/simple-ai/:username', async (req, res) => {
     const user = await User.findOne({ username }).populate('myCourses');
     if (!user) return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
 
-    // Kullanıcının satın aldığı kursların kategorileri
-    const userCategories = [...new Set(user.myCourses.map(c => c.category))];
+    // Kullanıcının satın aldığı kursların kategorilerini ve frekanslarını hesapla
+    const categoryCounts = {};
+    user.myCourses.forEach(course => {
+      categoryCounts[course.category] = (categoryCounts[course.category] || 0) + 1;
+    });
 
-    // Kullanıcının sahip olmadığı kategoriler
-    const recommendCategories = ALL_CATEGORIES.filter(cat => !userCategories.includes(cat));
+    // Kullanıcının en çok aldığı kategorileri bul (en az 1 kurs almış olmalı)
+    const sortedCategories = Object.entries(categoryCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(item => item[0]);
 
-    // Eğer kullanıcı tüm kategorileri aldıysa, zaten sahip olduğu kategorilerden öneri ver
-    const queryCategories = recommendCategories.length ? recommendCategories : userCategories;
+    // Eğer kullanıcının kursu yoksa rastgele kategorilerden öner
+    if (sortedCategories.length === 0) {
+      const randomRecommendations = await Course.aggregate([
+        { $sample: { size: 3 } }
+      ]);
+      return res.json(randomRecommendations);
+    }
 
     // Kullanıcının sahip olduğu kursların _id'leri
     const ownedCourseIds = user.myCourses.map(c => c._id);
 
-    // Öneriler: önerilen kategorilerden ve kullanıcıda olmayan kurslar
+    // Öneriler: Kullanıcının en çok aldığı kategorilerden ve sahip olmadığı kurslar
     const recommendations = await Course.find({
-      category: { $in: queryCategories },
+      category: { $in: sortedCategories },
       _id: { $nin: ownedCourseIds }
-    }).limit(3);
+    })
+    .sort({ createdAt: -1 }) // Yeni eklenen kurslar önce gelsin
+    .limit(3);
+
+    // Eğer öneri yoksa, aynı kategorilerden farklı kurslar öner
+    if (recommendations.length === 0) {
+      const fallbackRecommendations = await Course.find({
+        category: { $in: sortedCategories },
+        _id: { $nin: ownedCourseIds }
+      })
+      .limit(3);
+      return res.json(fallbackRecommendations);
+    }
 
     res.json(recommendations);
   } catch (error) {
