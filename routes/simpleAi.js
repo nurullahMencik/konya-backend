@@ -11,14 +11,7 @@ router.get('/simple-ai/:username', async (req, res) => {
 
     // Kullanıcıyı bul ve satın alınan kursları populate et
     const user = await User.findOne({ username }).populate('myCourses');
-
-    // Eğer kullanıcı yoksa rastgele 10 kurs öner
-    if (!user) {
-      const randomCourses = await Course.aggregate([
-        { $sample: { size: 10 } }
-      ]);
-      return res.json(randomCourses);
-    }
+    if (!user) return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
 
     // Kullanıcının satın aldığı kursların kategorilerini ve frekanslarını hesapla
     const categoryCounts = {};
@@ -85,6 +78,5 @@ router.get('/simple-ai/:username', async (req, res) => {
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
-
 
 module.exports = router;
