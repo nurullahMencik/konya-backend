@@ -7,6 +7,23 @@ const JWT_SECRET = process.env.JWT_SECRET || "SECRET_KEY";
 
 
 
+const getCoursesByUsername = async (req, res) => {
+  try {
+    const username = req.params.username;
+
+    const courses = await Course.find({ user: username });
+
+    if (!courses || courses.length === 0) {
+      return res.status(404).json({ message: "Kullanıcının kursu bulunamadı" });
+    }
+
+    res.status(200).json({ courses });
+  } catch (error) {
+    res.status(500).json({ message: "Sunucu hatası", error: error.message });
+  }
+};
+
+
 // Kullanıcının satın aldığı kursları getir
 const getMyCourses = async (req, res) => {
   try {
@@ -187,5 +204,6 @@ module.exports = {
   getCreatedCourses,
   deleteCourse,
   updateCourse,
-  getCourseById
+  getCourseById,
+  getCoursesByUsername,
 };

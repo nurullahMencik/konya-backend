@@ -16,6 +16,8 @@ router.delete('/courses/:id', verifyToken, authController.deleteCourse);
 router.put('/courses/:id', verifyToken, authController.updateCourse);
 router.get('/courses/:id', verifyToken, authController.getCourseById);
 
+router.get("/user/:username", authController.getCoursesByUsername);
+
 
 
 module.exports = router;
