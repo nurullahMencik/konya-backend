@@ -18,6 +18,15 @@ router.get('/courses/:id', verifyToken, authController.getCourseById);
 
 router.get("/user/:username", authController.getCoursesByUsername);
 
+router.get('/', async (req, res) => {
+  try {
+    const users = await User.find().select('username _id'); // Sadece username ve _id al
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: 'Sunucu hatası!' });
+  }
+});
+
 
 
 module.exports = router;
