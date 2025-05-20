@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authController");
+const User = require("../models/authModel");
 const verifyToken = require("../middleware/verifyToken");
 
 // Kullanıcı kayıt ve giriş işlemleri
