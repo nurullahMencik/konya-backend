@@ -5,13 +5,29 @@ const Course = require("../models/courseModel");
 
 const ALL_CATEGORIES = ["Frontend", "Backend", "Full Stack", "Mobil Geliştirme", "Veri Bilimi"];
 
-router.get('/simple-ai/:username', async (req, res) => {
+router.get('/simple-ai/:username?', async (req, res) => {
   try {
     const username = req.params.username;
 
+    // Kullanıcı girişi yapılmamışsa rastgele popüler kursları öner
+    if (!username) {
+      const popularCourses = await Course.aggregate([
+        { $sort: { students: -1, createdAt: -1 } },
+        { $limit: 10 }
+      ]);
+      return res.json(popularCourses);
+    }
+
     // Kullanıcıyı bul ve satın alınan kursları populate et
     const user = await User.findOne({ username }).populate('myCourses');
-    if (!user) return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    if (!user) {
+      // Kullanıcı bulunamazsa popüler kursları öner
+      const popularCourses = await Course.aggregate([
+        { $sort: { students: -1, createdAt: -1 } },
+        { $limit: 10 }
+      ]);
+      return res.json(popularCourses);
+    }
 
     // Kullanıcının satın aldığı kursların kategorilerini ve frekanslarını hesapla
     const categoryCounts = {};
