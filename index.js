@@ -11,7 +11,7 @@ const courseRouter = require("./routes/courseRoute.js");
 const purchaseRoutes = require("./routes/purchaseRoutes.js");
 const profileRoutes = require('./routes/profileRoute.js');
 const simpleAiRoutes = require('./routes/simpleAi');
-const cartRoutes = require('./routes/cart');
+const cartRoutes = require('./routes/cartRoute.js');
 dotenv.config();
 
 const app = express();
