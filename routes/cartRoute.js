@@ -8,56 +8,42 @@ const FIXED_COUPONS = {
   "nurullah100": 100
 };
 
-// POST /api/cart/discounted
 router.post('/discounted', async (req, res) => {
-  const { username, cartCourseIds, couponCode } = req.body;
-
   try {
+    const { username, cartCourseIds } = req.body;
+    
+    // 1. Validasyon
+    if (!username || !cartCourseIds?.length) {
+      return res.status(400).json({ message: 'Eksik bilgi' });
+    }
+
+    // 2. Verileri çek
     const user = await User.findOne({ username }).populate('myCourses');
-    if (!user) return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
-
-    const userCategories = user.myCourses.map(course => course.category);
-
     const cartCourses = await Course.find({ _id: { $in: cartCourseIds } });
 
-    let subtotal = 0;
-
+    // 3. Hesaplamalar
+    const userCategories = user?.myCourses?.map(c => c.category) || [];
+    
     const discountedCart = cartCourses.map(course => {
       const hasSameCategory = userCategories.includes(course.category);
-      const discountRate = hasSameCategory ? 0.1 : 0;
-      const discountedPrice = Math.round(course.price * (1 - discountRate));
-
-      subtotal += discountedPrice;
+      const originalPrice = course.price || 0; // Fallback
+      const discountedPrice = hasSameCategory 
+        ? Math.round(originalPrice * 0.9)
+        : originalPrice;
 
       return {
         ...course.toObject(),
-        originalPrice: course.price,
+        originalPrice,
         discountedPrice,
         discountApplied: hasSameCategory
       };
     });
 
-    let couponDiscount = 0;
-    if (couponCode && FIXED_COUPONS[couponCode]) {
-      couponDiscount = FIXED_COUPONS[couponCode];
-    }
-
-    // En fazla sepet tutarı kadar indirim
-    const finalTotal = Math.max(0, subtotal - couponDiscount);
-    const tax = Math.round(finalTotal * 0.18); // %18 KDV
-
-    res.json({
-      discountedCart,
-      subtotal,
-      couponDiscount,
-      tax,
-      total: finalTotal + tax
-    });
-
+    res.json({ discountedCart });
+    
   } catch (err) {
-    console.error("İndirim hesaplama hatası:", err);
-    res.status(500).json({ message: 'Sunucu hatası' });
+    console.error("Hata:", err);
+    res.status(500).json({ message: 'Sunucu hatası', error: err.message });
   }
 });
-
 module.exports = router;
