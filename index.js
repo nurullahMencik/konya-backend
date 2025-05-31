@@ -11,7 +11,6 @@ const courseRouter = require("./routes/courseRoute.js");
 const purchaseRoutes = require("./routes/purchaseRoutes.js");
 const profileRoutes = require('./routes/profileRoute.js');
 const simpleAiRoutes = require('./routes/simpleAi');
-const couponRoutes= require("./routes/couponRoute.js")
 dotenv.config();
 
 const app = express();
@@ -31,7 +30,6 @@ app.use("/api/courses", courseRouter);
 app.use("/api/purchase", purchaseRoutes);
 app.use("/api/profile",profileRoutes)
 app.use('/api', simpleAiRoutes);
-app.use('/api/coupons', couponRoutes);
 // Start server
 const PORT = process.env.PORT || 5000;
 databaseConnect();
