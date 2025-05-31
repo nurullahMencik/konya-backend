@@ -29,6 +29,25 @@ router.delete('/user/:id', async (req, res) => {
     res.status(500).json({ message: 'Sunucu hatası!' });
   }
 });
+// PUT /api/auth/:id/admin - Kullanıcıyı admin yap
+router.put('/:id/admin', async (req, res) => {
+  try {
+    const { isAdmin } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isAdmin },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+
+    res.status(200).json({ message: 'Admin durumu güncellendi.', user });
+  } catch (error) {
+    console.error('Admin yapma hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası.' });
+  }
+});
 
 
 router.get('/', async (req, res) => {
