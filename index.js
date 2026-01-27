@@ -4,6 +4,9 @@ const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
 const path = require("path");
 
+// Load environment variables FIRST before requiring routes
+dotenv.config();
+
 const databaseConnect = require("./config/database.js");
 
 const authRouter = require("./routes/authRoute.js");
@@ -12,8 +15,6 @@ const purchaseRoutes = require("./routes/purchaseRoutes.js");
 const profileRoutes = require('./routes/profileRoute.js');
 const simpleAiRoutes = require('./routes/simpleAi.js');
 const roadmapRoutes = require('./routes/roadmapRoutes.js'); // ✅ Yol haritası rotası
-
-dotenv.config();
 
 const app = express();
 
